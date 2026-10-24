@@ -69,6 +69,8 @@ async def send_long(event, text):
 
 
 async def ask_llm(system, text):
+    log.info("llm input: %d chars", len(text))
+    open("last_llm_input.txt", "w").write(text)  # debug: exact text sent to the model
     r = await llm.aio.models.generate_content(
         model=LLM_MODEL,
         contents=text,
@@ -82,10 +84,11 @@ async def ask_llm(system, text):
 async def read_messages(chat_id, limit):
     lines = []
     async for m in user.iter_messages(chat_id, limit=limit):
-        if not m.text:
+        text = " ".join((m.message or "").split())  # raw text (no markup), one line
+        if not text:
             continue
         name = utils.get_display_name(m.sender) or "?"
-        lines.append(f"[{m.date:%d/%m %H:%M}] {name}: {m.text}")
+        lines.append(f"[{m.date.astimezone():%d/%m %H:%M}] {name}: {text}")
     lines.reverse()  # chronological order
     return "\n".join(lines)
 
