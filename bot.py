@@ -15,6 +15,7 @@ API_ID = int(os.environ["API_ID"])
 API_HASH = os.environ["API_HASH"]
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 OWNER_ID = int(os.environ["OWNER_ID"])
+PHONE = os.getenv("PHONE")  # +39...; if missing, asked interactively on first login
 TARGET_LANG = os.getenv("TARGET_LANG", "en")
 SUMMARY_LIMIT = int(os.getenv("SUMMARY_LIMIT", "100"))
 
@@ -194,7 +195,8 @@ async def reply_send(event):
 
 
 async def main():
-    await user.start()  # first run: interactive phone + code login in the terminal
+    # first run: the login code is still typed in the terminal
+    await user.start(phone=PHONE or (lambda: input("Phone (+39...): ")))
     await bot.start(bot_token=BOT_TOKEN)
     me = await user.get_me()
     log.info("user client: %s, bot ready", utils.get_display_name(me))

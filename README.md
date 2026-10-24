@@ -16,7 +16,8 @@ bot is the interface: it summarizes and translates messages and voice notes.
    ```
 3. Copy `.env.example` to `.env` and fill it in (Telegram API id/hash, BotFather
    token, your user id, Gemini API key for Gemma 4, ElevenLabs keys).
-4. First run logs in your Telegram account interactively (phone number + code).
+4. First run logs in your Telegram account: the phone number comes from `PHONE`
+   in `.env`, the code Telegram sends you is typed in the terminal.
    The session is saved in `user.session`, you won't be asked again.
    ```bash
    python bot.py
