@@ -77,7 +77,7 @@ async def send_long(event, text):
 
 async def ask_llm(system, text):
     log.info("llm input: %d chars", len(text))
-    open("last_llm_input.txt", "w").write(text)  # debug: exact text sent to the model
+    open("last_llm_input.txt", "w", encoding="utf-8").write(text)  # debug: exact text sent to the model
     r = await llm.aio.models.generate_content(
         model=LLM_MODEL,
         contents=text,
