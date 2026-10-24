@@ -117,7 +117,10 @@ async def pick_group(event):
     chat_id = int(event.pattern_match.group(1))
     state["chat"] = chat_id
     name = utils.get_display_name(await user.get_entity(chat_id))
-    await event.edit(f"📌 {name}", buttons=[[Button.inline("📝 Summary", f"s:{chat_id}")]])
+    await event.edit(
+        f"📌 {name}",
+        buttons=[[Button.inline("📝 Summary", f"s:{chat_id}"), Button.inline("🎙️ Voice notes", f"v:{chat_id}")]],
+    )
 
 
 @bot.on(events.CallbackQuery(pattern=rb"s:(-?\d+)"))
@@ -129,10 +132,12 @@ async def summary(event):
     if not text:
         await event.respond("No text messages found.")
         return
-    await send_long(event, await ask_llm(SUMMARY_PROMPT, text))
+    summary_text = await ask_llm(SUMMARY_PROMPT, text)
+    await send_long(event, summary_text)
+    await send_audio_summary(event, summary_text)
 
 
-# ---------- ElevenLabs extras (not wired to buttons yet) ----------
+# ---------- ElevenLabs extras ----------
 
 
 async def tts(text):
@@ -150,13 +155,12 @@ async def transcribe(data):
     return r.text
 
 
-# Extra 1: wire by calling this after send_long() in summary()
 async def send_audio_summary(event, text):
-    await bot.send_file(event.chat_id, await tts(text), voice_note=True)
+    await bot.send_file(event.chat_id, await tts(text.replace("• ", "")), voice_note=True)
 
 
-# Extra 2: wire with @bot.on(events.CallbackQuery(pattern=rb"v:(-?\d+)")) + @guard,
-# and add Button.inline("🎙️ Vocali", f"v:{chat_id}") in pick_group()
+@bot.on(events.CallbackQuery(pattern=rb"v:(-?\d+)"))
+@guard
 async def voices(event):
     chat_id = int(event.pattern_match.group(1))
     await event.answer("Transcribing voice messages…")
@@ -172,7 +176,8 @@ async def voices(event):
         await bot.send_file(event.chat_id, await tts(translated), voice_note=True)
 
 
-# Extra 3a: wire with @bot.on(events.NewMessage(func=lambda e: e.voice)) + @guard
+@bot.on(events.NewMessage(func=lambda e: e.voice))
+@guard
 async def reply_draft(event):
     if state["chat"] is None:
         await event.respond("Pick a group with /start first.")
@@ -191,7 +196,8 @@ async def reply_draft(event):
     )
 
 
-# Extra 3b: wire with @bot.on(events.CallbackQuery(data=b"send")) + @guard
+@bot.on(events.CallbackQuery(data=b"send"))
+@guard
 async def reply_send(event):
     if not state["draft"]:
         await event.answer("Nothing to send.")
