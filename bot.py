@@ -128,7 +128,7 @@ async def pick_group(event):
         f"📌 {name}",
         buttons=[
             [Button.inline("📝 Summary", f"s:{chat_id}"), Button.inline("🎙️ Voice notes", f"v:{chat_id}")],
-            [Button.inline(f"🌐 Translate last {SUMMARY_LIMIT}", f"t:{chat_id}")],
+            [Button.inline("🌐 Translate", f"t:{chat_id}")],
         ],
     )
 
