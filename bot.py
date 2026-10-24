@@ -27,7 +27,7 @@ user = TelegramClient("user", API_ID, API_HASH)
 bot = TelegramClient("bot", API_ID, API_HASH)
 bot.parse_mode = None  # LLM output may contain * or _ that would break markdown
 llm = genai.Client()  # reads GEMINI_API_KEY
-LLM_MODEL = "gemma-4-31b-it"
+LLM_MODEL = "gemma-4-26b-a4b-it"  # 31b is 3.5x slower and flaky (500s)
 eleven = AsyncElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
 VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID")
 state = {"chat": None, "draft": None}  # last selected group, pending reply to post
@@ -35,7 +35,7 @@ state = {"chat": None, "draft": None}  # last selected group, pending reply to p
 SUMMARY_PROMPT = f"""You help an Erasmus student in Italy who was added to an Italian Telegram group
 and does not understand Italian. You receive the latest messages of the group.
 Write a summary in the language with ISO code "{TARGET_LANG}" as a plain-text bulleted list
-(use "•" bullets, no markdown headers or bold). Cover, in this order when present:
+(use "•" bullets; never use markdown: no "#", no "**", no "*"). Cover, in this order when present:
 deadlines and dates, events and meetings, decisions taken, questions addressed to everyone,
 anything the student should act on. Keep names of people, places and courses as they are.
 Be concise: skip chit-chat. If nothing relevant, say so in one line."""
@@ -74,7 +74,12 @@ async def ask_llm(system, text):
     r = await llm.aio.models.generate_content(
         model=LLM_MODEL,
         contents=text,
-        config=types.GenerateContentConfig(system_instruction=system, max_output_tokens=4096),
+        config=types.GenerateContentConfig(
+            system_instruction=system,
+            max_output_tokens=2048,
+            # default thinking burns ~1000 tokens and 3x the time; "minimal" is the only level accepted
+            thinking_config=types.ThinkingConfig(thinking_level="minimal"),
+        ),
     )
     if not r.text:
         raise RuntimeError("empty answer from the model")
