@@ -33,8 +33,8 @@ A private Telegram bot with four actions, all in the student's language:
 |---|---|
 | **📝 Summary** | A short spoken-style briefing of the last N messages: what is urgent, events, decisions, open questions, plus a final `Deadlines:` line. Delivered as text **and as a voice note**. |
 | **🌐 Translate** | The last N messages translated line by line, keeping `[date time] Name:` so you still see who said what. |
-| **Forward a voice note** | Forward any Italian voice message you don't understand to the bot: it comes back transcribed, translated, and **as a voice note in your language**. |
-| **Reply in your language** | Record a voice note to the bot in your language: it comes back transcribed, translated into natural Italian, and voiced. One tap and your account posts text + voice to the group. |
+| **Forward a voice note** | Forward any Italian voice message you don't understand to the bot: it comes back **as a voice note in your language**. Audio in, audio out. |
+| **Reply in your language** | Record a voice note to the bot in your language: it comes back as the same message voiced in natural Italian, with a ✅ button. One tap and your account posts it to the group. |
 
 ## Implementation
 
@@ -89,5 +89,5 @@ Dependencies: `telethon`, `python-dotenv`, `google-genai`, `elevenlabs`.
    python bot.py
    ```
 5. In Telegram, open your bot, send `/start`, pick a group, tap a button.
-   Forward it any Italian voice note to get it back in your language.
+   Forward it any Italian voice note to get it back as a voice note in your language.
    To reply in the group, record a voice note to the bot and confirm with the ✅ button.

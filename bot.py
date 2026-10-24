@@ -185,13 +185,12 @@ async def send_audio_summary(event, text):
 
 
 # A voice note FORWARDED to the bot is an Italian message the student did not understand:
-# it comes back as text + a voice note in the student's language.
+# it comes back as a voice note in the student's language, audio in → audio out.
 @bot.on(events.NewMessage(func=lambda e: e.voice and e.forward))
 @guard
 async def translate_voice(event):
     original = await transcribe(await event.download_media(bytes))
     translated = await ask_llm(TRANSLATE_PROMPT, original)
-    await event.respond(f"🇮🇹 {original}\n\n➡️ {translated}")
     await bot.send_file(event.chat_id, await tts(translated), voice_note=True)
 
 
@@ -206,7 +205,6 @@ async def reply_draft(event):
     italian = await ask_llm(TO_ITALIAN_PROMPT, original)
     state["draft"] = italian
     name = utils.get_display_name(await user.get_entity(state["chat"]))
-    await event.respond(f"You said: {original}\n\n🇮🇹 {italian}")
     await bot.send_file(
         event.chat_id,
         await tts(italian),

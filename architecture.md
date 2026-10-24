@@ -91,7 +91,6 @@ sequenceDiagram
     EL-->>B: Italian transcript
     B->>LLM: translate transcript
     LLM-->>B: translation
-    B-->>S: 🇮🇹 transcript · ➡️ translation
     B->>EL: text_to_speech.convert(translation, eleven_v4)
     EL-->>B: OGG/Opus
     B-->>S: voice note in the student's language
@@ -115,7 +114,6 @@ sequenceDiagram
     EL-->>B: transcript
     B->>LLM: translate into natural informal Italian
     LLM-->>B: Italian text
-    B-->>S: "You said: …" + 🇮🇹 Italian text
     B->>EL: text_to_speech.convert(Italian)
     EL-->>B: OGG/Opus
     B-->>S: Italian voice note + button "✅ Send to <group>"
