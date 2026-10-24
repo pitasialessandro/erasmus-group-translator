@@ -34,11 +34,18 @@ state = {"chat": None, "draft": None}  # last selected group, pending reply to p
 
 SUMMARY_PROMPT = f"""You help an Erasmus student in Italy who was added to an Italian Telegram group
 and does not understand Italian. You receive the latest messages of the group.
-Write a summary in the language with ISO code "{TARGET_LANG}" as a plain-text bulleted list
-(use "•" bullets; never use markdown: no "#", no "**", no "*"). Cover, in this order when present:
-deadlines and dates, events and meetings, decisions taken, questions addressed to everyone,
-anything the student should act on. Keep names of people, places and courses as they are.
-Be concise: skip chit-chat. If nothing relevant, say so in one line."""
+Write a short spoken-style briefing in the language with ISO code "{TARGET_LANG}", as a friend
+catching the student up on what happened: 2 or 3 short paragraphs of flowing prose, no lists,
+no markdown (no "#", no "**", no "*"). Start with what is urgent or has a deadline, then events,
+meetings and decisions, then open questions addressed to everyone. Keep names of people, places
+and courses as they are, keep dates and times exact. Skip chit-chat. About 150 words.
+End with one final line starting with "Deadlines:" listing the dates that matter, or
+"Deadlines: none" if there are none."""
+
+TRANSLATE_CHAT_PROMPT = f"""Translate the following Italian group chat into the language with ISO code
+"{TARGET_LANG}". Rules: translate every line, one output line per input line, same order;
+keep the "[date time] Name:" prefix exactly as it is; keep names, places and course names as they are;
+informal tone like the original; no comments, no markdown, nothing but the translated lines."""
 
 TRANSLATE_PROMPT = f"""Translate the following Italian voice-message transcript into the language
 with ISO code "{TARGET_LANG}". Output only the translation, nothing else."""
@@ -119,7 +126,10 @@ async def pick_group(event):
     name = utils.get_display_name(await user.get_entity(chat_id))
     await event.edit(
         f"📌 {name}",
-        buttons=[[Button.inline("📝 Summary", f"s:{chat_id}"), Button.inline("🎙️ Voice notes", f"v:{chat_id}")]],
+        buttons=[
+            [Button.inline("📝 Summary", f"s:{chat_id}"), Button.inline("🎙️ Voice notes", f"v:{chat_id}")],
+            [Button.inline(f"🌐 Translate last {SUMMARY_LIMIT}", f"t:{chat_id}")],
+        ],
     )
 
 
@@ -135,6 +145,18 @@ async def summary(event):
     summary_text = await ask_llm(SUMMARY_PROMPT, text)
     await send_long(event, summary_text)
     await send_audio_summary(event, summary_text)
+
+
+@bot.on(events.CallbackQuery(pattern=rb"t:(-?\d+)"))
+@guard
+async def translate_chat(event):
+    chat_id = int(event.pattern_match.group(1))
+    await event.answer(f"Translating the last {SUMMARY_LIMIT} messages…")
+    text = await read_messages(chat_id, SUMMARY_LIMIT)
+    if not text:
+        await event.respond("No text messages found.")
+        return
+    await send_long(event, await ask_llm(TRANSLATE_CHAT_PROMPT, text))
 
 
 # ---------- ElevenLabs extras ----------
@@ -156,7 +178,7 @@ async def transcribe(data):
 
 
 async def send_audio_summary(event, text):
-    await bot.send_file(event.chat_id, await tts(text.replace("• ", "")), voice_note=True)
+    await bot.send_file(event.chat_id, await tts(text), voice_note=True)
 
 
 @bot.on(events.CallbackQuery(pattern=rb"v:(-?\d+)"))
