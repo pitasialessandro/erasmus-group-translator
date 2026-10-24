@@ -27,7 +27,8 @@ user = TelegramClient("user", API_ID, API_HASH)
 bot = TelegramClient("bot", API_ID, API_HASH)
 bot.parse_mode = None  # LLM output may contain * or _ that would break markdown
 llm = genai.Client()  # reads GEMINI_API_KEY
-LLM_MODEL = "gemma-4-26b-a4b-it"  # 31b is 3.5x slower and flaky (500s)
+LLM_MODEL = "gemma-4-26b-a4b-it"
+LLM_FALLBACK = "gemma-4-31b-it"  # 3.5x slower, but a different pool when the 26b backend returns 500s
 eleven = AsyncElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
 VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID")
 state = {"chat": None, "draft": None}  # last selected group, pending reply to post
@@ -78,16 +79,20 @@ async def send_long(event, text):
 async def ask_llm(system, text):
     log.info("llm input: %d chars", len(text))
     open("last_llm_input.txt", "w", encoding="utf-8").write(text)  # debug: exact text sent to the model
-    r = await llm.aio.models.generate_content(
-        model=LLM_MODEL,
-        contents=text,
-        config=types.GenerateContentConfig(
-            system_instruction=system,
-            max_output_tokens=2048,
-            # default thinking burns ~1000 tokens and 3x the time; "minimal" is the only level accepted
-            thinking_config=types.ThinkingConfig(thinking_level="minimal"),
-        ),
+    config = types.GenerateContentConfig(
+        system_instruction=system,
+        max_output_tokens=2048,
+        # default thinking burns ~1000 tokens and 3x the time; "minimal" is the only level accepted
+        thinking_config=types.ThinkingConfig(thinking_level="minimal"),
+        # the Gemma backend returns instant 500s in bursts and the SDK does not retry by default:
+        # 5 attempts with exponential backoff (~15s), then one try on the other model
+        http_options=types.HttpOptions(retry_options=types.HttpRetryOptions(attempts=5)),
     )
+    try:
+        r = await llm.aio.models.generate_content(model=LLM_MODEL, contents=text, config=config)
+    except genai.errors.ServerError as e:
+        log.warning("%s failed (%s), falling back to %s", LLM_MODEL, e, LLM_FALLBACK)
+        r = await llm.aio.models.generate_content(model=LLM_FALLBACK, contents=text, config=config)
     if not r.text:
         raise RuntimeError("empty answer from the model")
     return r.text.strip()
