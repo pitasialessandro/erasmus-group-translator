@@ -8,7 +8,6 @@ from elevenlabs.client import AsyncElevenLabs
 from google import genai
 from google.genai import types
 from telethon import Button, TelegramClient, events, utils
-from telethon.tl.types import InputMessagesFilterVoice
 
 load_dotenv()
 API_ID = int(os.environ["API_ID"])
@@ -132,8 +131,7 @@ async def pick_group(event):
     await event.edit(
         f"📌 {name}",
         buttons=[
-            [Button.inline("📝 Summary", f"s:{chat_id}"), Button.inline("🎙️ Voice notes", f"v:{chat_id}")],
-            [Button.inline("🌐 Translate", f"t:{chat_id}")],
+            [Button.inline("📝 Summary", f"s:{chat_id}"), Button.inline("🌐 Translate", f"t:{chat_id}")],
         ],
     )
 
@@ -186,24 +184,19 @@ async def send_audio_summary(event, text):
     await bot.send_file(event.chat_id, await tts(text), voice_note=True)
 
 
-@bot.on(events.CallbackQuery(pattern=rb"v:(-?\d+)"))
+# A voice note FORWARDED to the bot is an Italian message the student did not understand:
+# it comes back as text + a voice note in the student's language.
+@bot.on(events.NewMessage(func=lambda e: e.voice and e.forward))
 @guard
-async def voices(event):
-    chat_id = int(event.pattern_match.group(1))
-    await event.answer("Transcribing voice messages…")
-    msgs = await user.get_messages(chat_id, limit=5, filter=InputMessagesFilterVoice)
-    if not msgs:
-        await event.respond("No voice messages found.")
-        return
-    for m in reversed(msgs):
-        original = await transcribe(await user.download_media(m, bytes))
-        translated = await ask_llm(TRANSLATE_PROMPT, original)
-        name = utils.get_display_name(m.sender) or "?"
-        await event.respond(f"🎙️ {name} ({m.date:%d/%m %H:%M})\n\n🇮🇹 {original}\n\n➡️ {translated}")
-        await bot.send_file(event.chat_id, await tts(translated), voice_note=True)
+async def translate_voice(event):
+    original = await transcribe(await event.download_media(bytes))
+    translated = await ask_llm(TRANSLATE_PROMPT, original)
+    await event.respond(f"🇮🇹 {original}\n\n➡️ {translated}")
+    await bot.send_file(event.chat_id, await tts(translated), voice_note=True)
 
 
-@bot.on(events.NewMessage(func=lambda e: e.voice))
+# A voice note RECORDED by the student is a reply to post in the group, after confirmation.
+@bot.on(events.NewMessage(func=lambda e: e.voice and not e.forward))
 @guard
 async def reply_draft(event):
     if state["chat"] is None:

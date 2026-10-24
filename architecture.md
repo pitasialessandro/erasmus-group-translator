@@ -9,10 +9,10 @@ Telegram account, a private Telegram bot, and two AI services (Gemma 4 for langu
 
 | Component | Role | Notes |
 |---|---|---|
-| <img src="docs/telegram.svg" width="20"> **Student (Telegram app)** | Talks to the bot in a private chat. Taps inline buttons, sends voice notes. | Only the `OWNER_ID` is served; other users are silently ignored. |
+| <img src="docs/telegram.svg" width="20"> **Student (Telegram app)** | Talks to the bot in a private chat. Taps inline buttons, forwards or records voice notes. | Only the `OWNER_ID` is served; other users are silently ignored. |
 | <img src="docs/python.svg" width="70"> **bot.py** | One asyncio process, two Telethon clients, four handlers. | No database, no web server, no inbound ports: both clients open outbound MTProto connections, so no ngrok or webhook is needed. |
-| **Bot client** | The user interface: `/start`, inline keyboards, text and voice replies. | Authenticated with the BotFather token. |
-| **User client** | Reads the groups the student is already in: dialogs, message history, voice notes. Posts the confirmed reply. | Authenticated once with phone + code (MTProto). Session stored in `user.session`. **No bot is ever added to the group.** |
+| **Bot client** | The user interface: `/start`, inline keyboards, text and voice replies. Receives forwarded and recorded voice notes. | Authenticated with the BotFather token. |
+| **User client** | Reads the groups the student is already in: dialogs and message history. Posts the confirmed reply. | Authenticated once with phone + code (MTProto). Session stored in `user.session`. **No bot is ever added to the group.** |
 | <img src="docs/gemma.svg" width="22"> **Gemma 4** (Gemini API) | Summaries, line-by-line chat translation, translation of voice transcripts, translation of the student's reply into Italian. | `gemma-4-26b-a4b-it`, `thinking_level="minimal"`, `max_output_tokens=2048`. Retry with exponential backoff, fallback to `gemma-4-31b-it`. |
 | <img src="docs/elevenlabs-symbol.svg" width="20"> **ElevenLabs** | Text-to-speech (`eleven_v4`, output `opus_48000_64`) and speech-to-text (`scribe_v2`). | Opus output is an OGG container, which Telegram accepts as a voice note as-is. |
 
@@ -25,7 +25,7 @@ flowchart LR
 
     subgraph P["bot.py · Python asyncio"]
         B["Bot client<br/>Telethon · BotFather token<br/>owner-only guard"]
-        H["Handlers<br/>Summary · Translate · Voice notes · Reply"]
+        H["Handlers<br/>Summary · Translate · Forwarded voice · Reply"]
         U["User client<br/>Telethon MTProto · student account"]
         B --> H --> U
     end
@@ -34,7 +34,7 @@ flowchart LR
     EL["ElevenLabs<br/>eleven_v4 TTS · scribe_v2 STT"]
 
     S <-- "buttons, text, voice notes" --> B
-    U <-- "read history & voice notes<br/>post confirmed reply" --> G
+    U <-- "read history<br/>post confirmed reply" --> G
     H <-- "text → summary / translation" --> LLM
     H <-- "text ⇄ audio" --> EL
 ```
@@ -75,32 +75,31 @@ sequenceDiagram
 Same read path as the summary. The prompt asks for one output line per input line, with the
 `[date time] Name:` prefix kept verbatim, so the student sees who said what. No ElevenLabs call.
 
-### 🎙️ Voice notes of the group
+### 🎙️ Forwarded voice note → voice note in your language
 
 ```mermaid
 sequenceDiagram
     actor S as Student
     participant B as Bot client
-    participant U as User client
     participant EL as ElevenLabs
     participant LLM as Gemma 4
 
-    S->>B: tap 🎙️ Voice notes
-    B->>U: get_messages(group, limit=5, filter=voice)
-    loop each voice note, oldest first
-        U->>U: download_media(bytes)
-        B->>EL: speech_to_text.convert(scribe_v2)
-        EL-->>B: Italian transcript
-        B->>LLM: translate transcript
-        LLM-->>B: translation
-        B-->>S: author · time · 🇮🇹 transcript · ➡️ translation
-        B->>EL: text_to_speech.convert(translation)
-        EL-->>B: OGG/Opus
-        B-->>S: voice note in the student's language
-    end
+    S->>B: forwards an Italian voice note from the group
+    Note over B: forward header present → "translate this for me"
+    B->>B: download_media(bytes)
+    B->>EL: speech_to_text.convert(scribe_v2)
+    EL-->>B: Italian transcript
+    B->>LLM: translate transcript
+    LLM-->>B: translation
+    B-->>S: 🇮🇹 transcript · ➡️ translation
+    B->>EL: text_to_speech.convert(translation, eleven_v4)
+    EL-->>B: OGG/Opus
+    B-->>S: voice note in the student's language
 ```
 
 ### 🗣️ Reply in your language
+
+A voice note **recorded** by the student (no forward header) takes this path instead.
 
 ```mermaid
 sequenceDiagram

@@ -33,15 +33,15 @@ A private Telegram bot with four actions, all in the student's language:
 |---|---|
 | **📝 Summary** | A short spoken-style briefing of the last N messages: what is urgent, events, decisions, open questions, plus a final `Deadlines:` line. Delivered as text **and as a voice note**. |
 | **🌐 Translate** | The last N messages translated line by line, keeping `[date time] Name:` so you still see who said what. |
-| **🎙️ Voice notes** | The last voice messages of the group transcribed, translated, and re-voiced in your language. |
-| **Reply in your language** | Send the bot a voice note in your language: it comes back transcribed, translated into natural Italian, and voiced. One tap and your account posts text + voice to the group. |
+| **Forward a voice note** | Forward any Italian voice message you don't understand to the bot: it comes back transcribed, translated, and **as a voice note in your language**. |
+| **Reply in your language** | Record a voice note to the bot in your language: it comes back transcribed, translated into natural Italian, and voiced. One tap and your account posts text + voice to the group. |
 
 ## Implementation
 
 One Python process, one file ([bot.py](bot.py)), two Telethon clients on the same asyncio loop:
 
-- **User client** (MTProto, the student's own account): lists groups, reads messages, downloads voice
-  notes, posts the confirmed reply. Logs in once interactively; the session is stored in `user.session`.
+- **User client** (MTProto, the student's own account): lists groups, reads messages, posts the
+  confirmed reply. Logs in once interactively; the session is stored in `user.session`.
 - **Bot client** (BotFather token): the UI. Inline buttons, private chat only, and it answers
   **only the `OWNER_ID`** configured in `.env`; everyone else is ignored.
 
@@ -58,6 +58,8 @@ Design choices:
 
 - Messages are sent to the model as `[dd/mm HH:MM] Name: text`, one line each, raw text without
   Telegram markup, local time. Media without text is skipped.
+- A voice note sent to the bot is routed by its forward header: forwarded means "translate this for me",
+  recorded means "post this to the group for me".
 - Every handler is wrapped by a small guard: owner check, and any API error becomes a `❌` message
   in chat instead of crashing the process.
 - No database, no framework: the only state is the last selected group and the pending reply draft.
@@ -87,4 +89,5 @@ Dependencies: `telethon`, `python-dotenv`, `google-genai`, `elevenlabs`.
    python bot.py
    ```
 5. In Telegram, open your bot, send `/start`, pick a group, tap a button.
-   To reply in the group, just send the bot a voice note and confirm with the ✅ button.
+   Forward it any Italian voice note to get it back in your language.
+   To reply in the group, record a voice note to the bot and confirm with the ✅ button.
