@@ -3,9 +3,10 @@ import io
 import logging
 import os
 
-import anthropic
 from dotenv import load_dotenv
 from elevenlabs.client import AsyncElevenLabs
+from google import genai
+from google.genai import types
 from telethon import Button, TelegramClient, events, utils
 from telethon.tl.types import InputMessagesFilterVoice
 
@@ -24,7 +25,8 @@ log = logging.getLogger("bot")
 user = TelegramClient("user", API_ID, API_HASH)
 bot = TelegramClient("bot", API_ID, API_HASH)
 bot.parse_mode = None  # LLM output may contain * or _ that would break markdown
-llm = anthropic.AsyncAnthropic()
+llm = genai.Client()  # reads GEMINI_API_KEY
+LLM_MODEL = "gemma-4-31b-it"
 eleven = AsyncElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
 VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID")
 state = {"chat": None, "draft": None}  # last selected group, pending reply to post
@@ -66,16 +68,14 @@ async def send_long(event, text):
 
 
 async def ask_llm(system, text):
-    r = await llm.messages.create(
-        model="claude-sonnet-5-5",
-        max_tokens=4096,
-        output_config={"effort": "low"},
-        system=system,
-        messages=[{"role": "user", "content": text}],
+    r = await llm.aio.models.generate_content(
+        model=LLM_MODEL,
+        contents=text,
+        config=types.GenerateContentConfig(system_instruction=system, max_output_tokens=4096),
     )
-    if r.stop_reason == "refusal":
-        raise RuntimeError("the model refused to process these messages")
-    return "".join(b.text for b in r.content if b.type == "text").strip()
+    if not r.text:
+        raise RuntimeError("empty answer from the model")
+    return r.text.strip()
 
 
 async def read_messages(chat_id, limit):

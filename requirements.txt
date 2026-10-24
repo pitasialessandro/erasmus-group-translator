@@ -1,4 +1,4 @@
 telethon
 python-dotenv
-anthropic
+google-genai
 elevenlabs
