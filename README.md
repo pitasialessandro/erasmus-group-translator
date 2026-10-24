@@ -1,10 +1,14 @@
 # Erasmus Group Translator
 
+<img src="images/SpaghettiUnfolder.png" alt="SpaghettiUnfolder logo" width="240">
+
 A personal Telegram assistant that lets an Erasmus student follow Italian group chats,
 voice messages included, without adding any bot to the group.
 Built in a 4-hour hackathon on **Gemma 4** (Gemini API) and **ElevenLabs** (TTS + Scribe STT).
 
 Architecture and diagrams: [architecture.md](architecture.md).
+
+<img src="images/demo.jpg" alt="Demo screenshot" width="600">
 
 ## Problem
 
@@ -19,7 +23,7 @@ Everyone writes in Italian, fast and in slang.
 
 ## Idea
 
-Instead of putting a bot *in* the group, give the student a **personal assistant that reads the groups
+Instead of putting a bot _in_ the group, give the student a **personal assistant that reads the groups
 through their own Telegram account** and talks to them in private.
 
 The student's account is already a member of every group, so it can read the history and download
@@ -29,12 +33,12 @@ voice notes. Nothing changes for the other members: no bot joins, nobody gets no
 
 A private Telegram bot with four actions, all in the student's language:
 
-| Action | What the student gets |
-|---|---|
-| **📝 Summary** | A short spoken-style briefing of the last N messages: what is urgent, events, decisions, open questions, plus a final `Deadlines:` line. Delivered as text **and as a voice note**. |
-| **🌐 Translate** | The last N messages translated line by line, keeping `[date time] Name:` so you still see who said what. |
-| **🎙️ Voice notes** | The last voice messages of the group transcribed, translated, and re-voiced in your language. |
-| **Reply in your language** | Send the bot a voice note in your language: it comes back transcribed, translated into natural Italian, and voiced. One tap and your account posts text + voice to the group. |
+| Action                     | What the student gets                                                                                                                                                               |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **📝 Summary**             | A short spoken-style briefing of the last N messages: what is urgent, events, decisions, open questions, plus a final `Deadlines:` line. Delivered as text **and as a voice note**. |
+| **🌐 Translate**           | The last N messages translated line by line, keeping `[date time] Name:` so you still see who said what.                                                                            |
+| **🎙️ Voice notes**         | The last voice messages of the group transcribed, translated, and re-voiced in your language.                                                                                       |
+| **Reply in your language** | Send the bot a voice note in your language: it comes back transcribed, translated into natural Italian, and voiced. One tap and your account posts text + voice to the group.       |
 
 ## Implementation
 
