@@ -122,6 +122,21 @@ async def start(event):
     await event.respond("Pick a group:", buttons=buttons)
 
 
+@bot.on(events.NewMessage(pattern=r"/status\s*$", incoming=True, func=lambda e: e.is_private))
+@guard
+async def status(event):
+    chat_id = state["chat"]
+    if chat_id is None:
+        group = "None selected. Use /start to pick a group."
+    else:
+        group = utils.get_display_name(await user.get_entity(chat_id))
+    await event.respond(
+        f"Group: {group}\n"
+        f"Translation language: {TARGET_LANG}\n"
+        f"Message limit for summaries and chat translations: {SUMMARY_LIMIT}"
+    )
+
+
 @bot.on(events.CallbackQuery(pattern=rb"g:(-?\d+)"))
 @guard
 async def pick_group(event):
