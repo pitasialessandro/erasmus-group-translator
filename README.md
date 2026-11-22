@@ -89,5 +89,6 @@ Dependencies: `telethon`, `python-dotenv`, `google-genai`, `elevenlabs`.
    python bot.py
    ```
 5. In Telegram, open your bot, send `/start`, pick a group, tap a button.
+   Send `/status` to check the selected group, translation language, and message limit.
    Forward it any Italian voice note to get it back as a voice note in your language.
    To reply in the group, record a voice note to the bot and confirm with the ✅ button.
